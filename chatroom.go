@@ -26,8 +26,8 @@ func broadcast(c map[net.Conn]*Client, newClients chan *Client, disconnects chan
 						if write_err != nil {
 							fmt.Println(write_err)
 							continue
-
 						}
+						break
 					}
 				}
 				if !found {
@@ -68,7 +68,7 @@ func read(user *Client, messages chan Message, disconnects chan *Client, room st
 			disconnects <- user
 			return
 		}
-		if line != "" && strings.HasPrefix(line, "/pm") {
+		if line != "" && strings.HasPrefix(line, "/pm ") {
 			message_split := strings.Split(line, " ")
 			if len(message_split) < 3 {
 				_, write_err := user.conn.Write([]byte("Error: Syntax is /pm USERNAME MESSAGE" + "\r\n"))
