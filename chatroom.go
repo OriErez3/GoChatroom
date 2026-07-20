@@ -18,14 +18,23 @@ func broadcast(c map[net.Conn]*Client, newClients chan *Client, disconnects chan
 		case msg := <-messages:
 			switch isaPM := msg.isPM; isaPM {
 			case true:
+				found := false
 				for con, client := range c {
 					if msg.pmTarget == client.username {
+						found = true
 						_, write_err := con.Write([]byte(msg.sender.username + ": " + msg.text))
 						if write_err != nil {
 							fmt.Println(write_err)
 							continue
 
 						}
+					}
+				}
+				if !found {
+					_, write_err := msg.sender.conn.Write([]byte("Error, user not found!" + "\r\n"))
+					if write_err != nil {
+						fmt.Println(write_err)
+						continue
 					}
 				}
 
@@ -61,6 +70,13 @@ func read(user *Client, messages chan Message, disconnects chan *Client, room st
 		}
 		if line != "" && strings.HasPrefix(line, "/pm") {
 			message_split := strings.Split(line, " ")
+			if len(message_split) < 3 {
+				_, write_err := user.conn.Write([]byte("Error: Syntax is /pm USERNAME MESSAGE" + "\r\n"))
+				if write_err != nil {
+					fmt.Println(write_err)
+				}
+				continue
+			}
 			messages <- Message{sender: user, room: room, text: strings.Join(message_split[2:], " "), isPM: true, pmTarget: message_split[1]}
 		} else if line != "" {
 			messages <- Message{sender: user, room: room, text: line}
