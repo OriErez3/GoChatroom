@@ -40,7 +40,7 @@ func broadcast(c map[net.Conn]*Client, newClients chan *Client, disconnects chan
 
 			case false:
 				for con, client := range c {
-					if msg.room == client.room {
+					if msg.room == client.room && msg.sender.conn != con {
 						_, write_err := con.Write([]byte(msg.sender.username + ": " + msg.text))
 						if write_err != nil {
 							fmt.Println(write_err)
@@ -77,7 +77,7 @@ func read(user *Client, messages chan Message, disconnects chan *Client, room st
 				}
 				continue
 			}
-			messages <- Message{sender: user, room: room, text: strings.Join(message_split[2:], " "), isPM: true, pmTarget: message_split[1]}
+			messages <- Message{sender: user, room: room, text: "[PM FROM " + user.username + "] " + strings.Join(message_split[2:], " "), isPM: true, pmTarget: message_split[1]}
 		} else if line != "" {
 			messages <- Message{sender: user, room: room, text: line}
 		}
@@ -129,7 +129,7 @@ func listen(clients map[net.Conn]*Client, newClients chan *Client, disconnects c
 
 func onboarding(clients map[net.Conn]*Client, connection net.Conn, newClients chan *Client, disconnects chan *Client, messages chan Message) {
 	reader := bufio.NewReader(connection)
-	_, write_err := connection.Write([]byte("Welcome! Choose a username: "))
+	_, write_err := connection.Write([]byte("Welcome! Choose a username: \r\n"))
 	if write_err != nil {
 		return
 	}
@@ -147,11 +147,13 @@ func onboarding(clients map[net.Conn]*Client, connection net.Conn, newClients ch
 	}
 	rooms_list.mu.Lock()
 	_, _ = connection.Write([]byte("List of rooms: "))
-	for room, _ := range rooms_list.list {
-		_, _ = connection.Write([]byte(room + ", "))
+	var roomNames []string
+	for room := range rooms_list.list {
+		roomNames = append(roomNames, room)
 	}
 	rooms_list.mu.Unlock()
-	_, write_err = connection.Write([]byte("\r\nChoose a room, or create one by typing a non-exisitent room: "))
+	_, _ = connection.Write([]byte(strings.Join(roomNames, ", ") + "\r\n"))
+	_, write_err = connection.Write([]byte("\r\nChoose a room, or create one by typing a non-exisitent room: \r\n"))
 	if write_err != nil {
 		return
 	}
