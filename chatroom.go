@@ -173,13 +173,15 @@ func onboarding(clients map[net.Conn]*Client, connection net.Conn, newClients ch
 			newClient := &Client{conn: connection, username: user_name, room: line}
 			newClients <- newClient
 			_, _ = connection.Write([]byte("Active Users: "))
+			var active_users []string
 			for _, val := range clients {
 				if val.room == newClient.room {
-					_, _ = connection.Write([]byte(val.username + ", "))
+					active_users = append(active_users, val.username)
 				}
 			}
-			_, _ = connection.Write([]byte("\r\n"))
+			_, _ = connection.Write([]byte(strings.Join(active_users, ", ") + "\r\n"))
 			go read(newClient, messages, disconnects, newClient.room)
+			_, _ = connection.Write([]byte("\x00READY\x00\r\n"))
 			break
 
 		}
